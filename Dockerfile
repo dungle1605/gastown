@@ -19,6 +19,12 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     tini \
     vim \
+    lsof \
+    procps \
+    iproute2 \
+    libicu-dev \
+    libzstd-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Install Go from official tarball (apt golang-go is too old)

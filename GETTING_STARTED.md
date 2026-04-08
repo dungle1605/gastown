@@ -9,6 +9,56 @@
 
 ---
 
+## Step 0 — Setup Environment & Sandbox (From Scratch)
+
+If you are setting up Gas Town and your projects from scratch (especially on Windows), follow these setup steps to prevent collision and permission issues.
+
+### 1. Configure `.env` correctly
+Your `FOLDER` variable must map to the **parent workspace** containing all your projects, *not* an individual project repository. Open `.env` and adjust the path:
+```ini
+GIT_USER=YourName
+GIT_EMAIL=your.email@example.com
+FOLDER=F:/Anti-gravity  # Ensure this is the parent folder!
+DASHBOARD_PORT=8080
+```
+
+### 2. Start the Sandbox
+From the `gastown` directory, spin up the Docker container:
+```bash
+docker compose up -d
+```
+
+### 3. Fix Windows Line Endings (Windows hosts only)
+If you cloned the repo on Windows, the shell scripts might have CRLF line endings which will crash in the container. Fix them:
+```bash
+docker compose exec -u root gastown bash -c "apt-get update && apt-get install -y dos2unix && find /gt/gastown/scripts -type f -name '*.sh' -exec dos2unix {} +"
+```
+
+### 4. Trust Local Repositories
+Since the files are mounted from Windows, Git will complain about "Dubious ownership". Fix this globally in the container:
+```bash
+docker compose exec gastown bash -c "git config --global --add safe.directory '*'"
+```
+
+### 5. Attach your Project as a Rig
+
+You can attach a project to Gas Town HQ (mounted at `/gt`) using two different approaches:
+
+**Approach A: From a Github URL (Recommended)**
+If you don't have the repo locally and just want Gastown to pull it directly and manage it:
+```bash
+# Example: Adding Gymastic from GitHub
+docker compose exec gastown bash -c "gt rig add gymastic_rig https://github.com/dungle1605/Gymastic.git --prefix gy"
+```
+
+**Approach B: From a Local Folder (Advanced)**
+If you mounted a physical folder from Windows (e.g., `/gt/gymastic`), use the bootstrap script so Gas Town can use it without duplicating git objects. Ensure the rig name does *not* conflict with your physical folder.
+```bash
+docker compose exec gastown bash -c "cd /gt && ./gastown/scripts/bootstrap-local-rig.sh --town-root /gt --rig gymastic_rig --local-repo /gt/gymastic --prefix gy --polecat-agent claude --witness-agent codex --refinery-agent codex"
+```
+
+---
+
 ## Step 1 — Enter the Container
 
 Open a terminal and run:
@@ -41,7 +91,7 @@ gt rig list
 
 Expected output:
 ```
-🟡 gymastic
+🟡 gymastic_rig
    Witness: ● running  Refinery: ○ stopped
    Polecats: 0  Crew: 0
 ```
@@ -50,21 +100,21 @@ Expected output:
 
 ## Step 3 — Create Your Crew Workspace
 
-A **crew** is your personal working directory inside the `gymastic` rig.
+A **crew** is your personal working directory inside the `gymastic_rig`.
 
 ```bash
 cd /gt
-gt crew add michael --rig gymastic
+gt crew add michael --rig gymastic_rig
 ```
 
 This creates:
 ```
-/gt/gymastic/crew/michael/   ← your personal workspace
+/gt/gymastic_rig/crew/michael/   ← your personal workspace
 ```
 
 Now enter it:
 ```bash
-cd /gt/gymastic/crew/michael
+cd /gt/gymastic_rig/crew/michael
 ```
 
 This is where you do hands-on coding work on the Gymastic project.
@@ -150,7 +200,7 @@ Once you have bead IDs, assign them to the Gymastic rig:
 
 ```bash
 # Replace gy-abc12 with your actual bead ID from `bd list`
-gt sling gy-abc12 gymastic
+gt sling gy-abc12 gymastic_rig
 ```
 
 This:
@@ -185,7 +235,7 @@ gt feed
 ├── CLAUDE.md                 ← Mayor's identity/instructions
 ├── mayor/                    ← Mayor agent home
 ├── deacon/                   ← Background supervisor
-├── gymastic/                 ← Your Gymastic project rig
+├── gymastic_rig/             ← Your Gymastic project rig
 │   ├── crew/michael/         ← YOUR personal workspace ← work here
 │   ├── polecats/             ← Worker agents (spawned per task)
 │   ├── witness/              ← Per-rig health monitor
@@ -206,7 +256,7 @@ gt feed
 | Web dashboard | `gt dashboard` (→ http://localhost:8080) |
 | Create task | `bd create --title "..." --type=task` |
 | List open tasks | `bd list --status=open` |
-| Assign task to agent | `gt sling <bead-id> gymastic` |
+| Assign task to agent | `gt sling <bead-id> gymastic_rig` |
 | See all agents | `gt agents` |
 | See convoy status | `gt convoy list` |
 | Health check | `gt doctor` |
@@ -225,11 +275,17 @@ This is the simplest way to use Gas Town:
 2. gt mayor attach                    ← open Mayor session
 3. Tell Mayor: "Add feature X"        ← plain English
 4. Ctrl+B, D                          ← detach from Mayor tmux
-5. gt feed                            ← watch agents work
-6. gt convoy list                     ← check progress
+5. gt feed                            ← watch agents work in terminal TUI
 ```
 
-The Mayor handles everything else automatically.
+**What to check on the Web Dashboard (`http://localhost:8080`) after Step 4:**
+Once you detach and leave the Mayor to work in the background, open the dashboard. You should see:
+- **Convoys Panel (Top Left):** A new Convoy will appear representing your request package.
+- **Work Panel (Bottom Left):** New tasks (Beads) generated for your request will show up here.
+- **Polecats Panel (Middle):** As the Mayor assigns tasks, worker agents (Polecats) will spawn here to write the code.
+- **Activity Panel (Right):** You'll see real-time logs of the Mayor creating hooks, spawning agents, and commits being made.
+
+The Mayor handles everything else automatically!
 
 ---
 

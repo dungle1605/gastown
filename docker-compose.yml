@@ -35,6 +35,11 @@ services:
       - dolt-data:/gt/.dolt-data
     ports:
       - "${DASHBOARD_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "sleep infinity"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     command: sleep infinity
 
     # Exec into the container with: docker compose exec gastown zsh
